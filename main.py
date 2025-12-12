@@ -82,7 +82,7 @@ with mp_pose.Pose(
             #     print("blocked")
 
             vector_right_hand = Vector(x_right1, y_right1, x_right3, y_right3)
-            vector_left_hand = Vector(x_left2, y_left2, x_left3, y_left3)
+            vector_left_hand = Vector(x_left1, y_left1, x_left3, y_left3)
             azimuth_right = cnt_angle(vector_right_hand, vector_north)
             azimuth_left = cnt_angle(vector_left_hand, vector_north)
             azimuth_right = (azimuth_right + 360) % 360
@@ -90,13 +90,13 @@ with mp_pose.Pose(
             direction_right = "wrong"
             direction_left = "wrong"
 
-            if is_straight(vector_left1, vector_left2):
+            if is_straight(vector_rigth1, vector_right2):
                 if azimuth_right < 45 or azimuth_right > 315: direction_right = "north"
                 elif azimuth_right < 135: direction_right = "east"
                 elif azimuth_right < 225: direction_right = "south"
                 else: direction_right = "west"
 
-            if is_straight(vector_rigth1, vector_right2):
+            if is_straight(vector_left1, vector_left2):
                 if azimuth_left < 45 or azimuth_left > 315: direction_left = "north"
                 elif azimuth_left < 135: direction_left = "east"
                 elif azimuth_left < 225: direction_left = "south"
@@ -104,7 +104,7 @@ with mp_pose.Pose(
 
             text_cord = (50, 50)
             cv2.putText(frame, direction_right, text_cord, cv2.FONT_HERSHEY_PLAIN, 3, (0, 0, 0), 4)
-            cv2.putText(frame, direction_left, (text_cord[0], text_cord[1] + 80 ), cv2.FONT_HERSHEY_PLAIN, 3, (0, 0, 0), 4)
+            cv2.putText(frame, direction_left, (text_cord[0], text_cord[1] + 80 ), cv2.FONT_HERSHEY_PLAIN, 3, (255, 0, 0), 4)
             print("angle_right:", azimuth_right)
             print("angle_left:", azimuth_left)
 
