@@ -2,6 +2,8 @@ from math import degrees, atan2
 import cv2
 import numpy as np
 import arcade
+import random
+import time
 import mediapipe as mp
 
 
@@ -39,6 +41,11 @@ vector_north = Vector(0, 0, 0, -100)
 south_vector = Vector(0, 100, 0, 0)
 east_vector = Vector(100, 0, 0, 0)
 west_vector = Vector(0, 0, 100, 0)
+cur_time = time.time()
+possible_directions = ["north", "south", "east", "west"]
+direction_right = "wrong"
+direction_left = "wrong"
+cur_direction = random.choice(possible_directions)
 with mp_pose.Pose(
         static_image_mode=False,
         model_complexity=1,
@@ -48,6 +55,15 @@ with mp_pose.Pose(
 ) as pose:
     while cap.isOpened():
         ret, frame = cap.read()
+        if 2.5 < time.time() - cur_time < 4:
+            if direction_left == cur_direction == direction_right:
+                cv2.putText(frame, "OK!", (frame.shape[0] // 2, frame.shape[1] // 2), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2)
+            else:
+                cv2.putText(frame, "WRONG", (frame.shape[0] // 2, frame.shape[1] // 2), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 2)
+        elif time.time() - cur_time >= 4:
+            cur_direction = random.choice(possible_directions)
+            cur_time = time.time()
+
         if not ret:
             assert RuntimeError("No video")
 
@@ -108,6 +124,7 @@ with mp_pose.Pose(
             print("angle_right:", azimuth_right)
             print("angle_left:", azimuth_left)
 
+        cv2.putText(frame, cur_direction, (300, 300), cv2.FONT_HERSHEY_PLAIN, 3, (255, 255, 255), 2)
         cv2.imshow("", frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
