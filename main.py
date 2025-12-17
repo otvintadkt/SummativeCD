@@ -34,7 +34,9 @@ def cnt_angle(vector1: "Vector", vector2: "Vector"):
 mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
+if not cap.isOpened():
+    cap = cv2.VideoCapture(0)
 
 vector_north = Vector(0, 0, 0, -100)
 cur_time = time.time()
