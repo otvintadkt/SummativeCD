@@ -1,10 +1,9 @@
-from math import degrees, atan2, remainder
+from math import degrees, atan2
 import cv2
 import numpy as np
 import random
 import time
 import mediapipe as mp
-
 
 class Vector:
     def __init__(self, x1, y1, x2, y2):
@@ -14,22 +13,25 @@ class Vector:
     def length(self):
         return (self.x ** 2 + self.y ** 2) ** 0.5
 
-    def __mul__(self, other: "Vector"): #scalar
+    def __mul__(self, other: "Vector"):  # scalar
         return self.x * other.x + self.y * other.y
 
     def cosine(self, other: "Vector"):
         return self * other / self.length() / other.length()
+
 
 def is_straight(vector1: "Vector", vector2: "Vector") -> bool:
     if Vector.cosine(vector1, vector2) > 0.5:
         return True
     return False
 
+
 def cnt_angle(vector1: "Vector", vector2: "Vector"):
     rangle_1 = atan2(vector1.y, vector1.x)
     rangle_2 = atan2(vector2.y, vector2.x)
     angle = degrees(rangle_2 - rangle_1)
     return angle
+
 
 mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
@@ -50,6 +52,10 @@ STATE_RESULT = 2
 ROUND_TIME = 2.5
 RESULT_TIME = 4
 state = STATE_MENU
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+Background = cv2.imread("background.png", cv2.IMREAD_COLOR)
+is_backgroung_changed = False
 
 with mp_pose.Pose(
         static_image_mode=False,
@@ -61,33 +67,40 @@ with mp_pose.Pose(
     while cap.isOpened():
         key = cv2.waitKey(1) & 0xFF
 
-        ret, frame = cap.read()
+        if key == ord("q"):
+            break
 
+        ret, frame = cap.read()
         if not ret:
             assert RuntimeError("No video")
 
+        if not is_backgroung_changed:
+            is_backgroung_changed = True
+            Background = cv2.resize(Background, (frame.shape[1], frame.shape[0]))
+
         if state == STATE_MENU:
-            frame = np.zeros(frame.shape)
-            cv2.putText(frame, "Press space to start",(120, 250),
-                cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
-            cv2.putText(frame, "Press Q to quit",(120, 350),
-                cv2.FONT_HERSHEY_PLAIN, 1.4, (255, 255, 255), 2)
+            frame = Background.copy()
+            cv2.putText(frame, "Press space to start", (120, 250),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.3, BLACK, 3)
+            cv2.putText(frame, "Press Q to quit", (120, 350),
+                        cv2.FONT_HERSHEY_PLAIN, 1.4, BLACK, 2)
 
             if key == ord(" "):
                 state = STATE_GAME
                 cur_time = time.time()
                 cur_direction = random.choice(possible_directions)
                 direction_right = direction_left = "wrong"
-            elif key == ord("q"):
-                break
         elif state == STATE_GAME:
+            if key == ord(" "):
+                state = STATE_MENU
+
             remaining_time = ROUND_TIME - time.time() + cur_time
 
-            cv2.putText(frame, f"SHOW: {cur_direction.upper()}",(200, 80),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
+            cv2.putText(frame, f"SHOW: {cur_direction.upper()}", (200, 80),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
 
-            cv2.putText(frame, f"{remaining_time:.1f}",(300, 140),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 255), 2)
+            cv2.putText(frame, f"time left: {remaining_time:.1f}", (300, 140),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 255), 2)
 
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = pose.process(rgb)
@@ -145,22 +158,30 @@ with mp_pose.Pose(
                     else:
                         direction_left = "west"
 
+            OK_RESULT = "OK!"
             if remaining_time <= 0:
-                if direction_left == cur_direction == direction_right:
-                    result_text = "OK!"
+                if direction_left == cur_direction == direction_right == "north" or \
+                        direction_left == cur_direction == direction_right == "south":
+                    result_text = OK_RESULT
+                elif direction_left == cur_direction == "west" and direction_right != "east" \
+                        or direction_right == cur_direction == "east" and direction_left != "west":
+                    result_text = OK_RESULT
                 else:
-                    result_text = "WRONG"
+                    result_text = "WRONG!"
 
                 state = STATE_RESULT
                 state_time = time.time()
         elif state == STATE_RESULT:
-            color = (0, 255, 0) if result_text == "OK!" else (0, 0, 255)
+            color = (0, 255, 0) if result_text == OK_RESULT else (0, 0, 255)
 
             cv2.putText(frame, result_text,
                         (260, 260), cv2.FONT_HERSHEY_SIMPLEX, 3, color, 4)
 
             if time.time() - cur_time >= RESULT_TIME:
-                state = STATE_MENU
+                state = STATE_GAME
+                cur_time = time.time()
+                cur_direction = random.choice(possible_directions)
+                direction_right = direction_left = "wrong"
 
         cv2.imshow("", frame)
 
