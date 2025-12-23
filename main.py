@@ -4,6 +4,9 @@ import numpy as np
 import random
 import time
 import mediapipe as mp
+from lang import eng, rus
+from config import *
+from PIL import Image, ImageDraw, ImageFont
 
 class Vector:
     def __init__(self, x1, y1, x2, y2):
@@ -32,6 +35,15 @@ def cnt_angle(vector1: "Vector", vector2: "Vector"):
     angle = degrees(rangle_2 - rangle_1)
     return angle
 
+def draw(img, text, cord, color):
+    pil_img = Image.fromarray(img)
+    drawing = ImageDraw.Draw(pil_img)
+
+    font = ImageFont.truetype("arial.ttf", 28)
+    drawing.text(cord, text, font=font, fill=color)
+
+    img = np.array(pil_img)
+    return img
 
 mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
@@ -39,6 +51,26 @@ mp_drawing = mp.solutions.drawing_utils
 cap = cv2.VideoCapture(1)
 if not cap.isOpened():
     cap = cv2.VideoCapture(0)
+if not cap.isOpened():
+    print("Could not open camera!")
+    exit()
+
+language_choose_window = np.zeros((500, 500, 3), dtype=np.uint8)
+language_choose_window = draw(language_choose_window, "Press E to play on English", (20, 20), WHITE)
+language_choose_window = draw(language_choose_window, "Нажмите R для игры на русском", (20, 120), WHITE)
+
+while True:
+    cv2.imshow("Language", language_choose_window)
+    key = cv2.waitKey(1) & 0xFF
+    print("key:", key)
+    if key == ord("r") or key == (rus_r := 234):
+        language = rus
+        break
+    elif key == ord("e") or key == (rus_e := 243):
+        language = eng
+        break
+
+cv2.destroyAllWindows()
 
 vector_north = Vector(0, 0, 0, -100)
 cur_time = time.time()
@@ -46,14 +78,6 @@ possible_directions = ["north", "south", "east", "west"]
 direction_right = "wrong"
 direction_left = "wrong"
 cur_direction = random.choice(possible_directions)
-STATE_MENU = 0
-STATE_GAME = 1
-STATE_RESULT = 2
-ROUND_TIME = 2.5
-RESULT_TIME = 4
-state = STATE_MENU
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
 Background = cv2.imread("background.png", cv2.IMREAD_COLOR)
 is_backgroung_changed = False
 
@@ -67,7 +91,8 @@ with mp_pose.Pose(
     while cap.isOpened():
         key = cv2.waitKey(1) & 0xFF
 
-        if key == ord("q"):
+        print(key)
+        if key == ord("q") or key == (rus_q := 233):
             break
 
         ret, frame = cap.read()
@@ -79,29 +104,27 @@ with mp_pose.Pose(
             Background = cv2.resize(Background, (frame.shape[1], frame.shape[0]))
 
         if state == STATE_MENU:
+            h, w, _ = frame.shape
             frame = Background.copy()
-            cv2.putText(frame, "Press space to start", (120, 250),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1.3, BLACK, 3)
-            cv2.putText(frame, "Press Q to quit", (120, 350),
-                        cv2.FONT_HERSHEY_PLAIN, 1.4, BLACK, 2)
+            ui = np.zeros((PANEL_HEIGHT, w, 3), dtype=np.uint8)
+
+            ui = draw(ui, language.ROUND_START_TEXT, (20, 30), WHITE)
+            ui = draw(ui, language.EXIT_TEXT, (20, 100), WHITE)
+
+            frame = np.vstack((ui, frame))
 
             if key == ord(" "):
                 state = STATE_GAME
                 cur_time = time.time()
                 cur_direction = random.choice(possible_directions)
-                direction_right = direction_left = "wrong"
+                direction_right = direction_left = language.WRONG
+
         elif state == STATE_GAME:
             if key == ord(" "):
                 state = STATE_MENU
 
             remaining_time = ROUND_TIME - time.time() + cur_time
-
-            cv2.putText(frame, f"SHOW: {cur_direction.upper()}", (200, 80),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
-
-            cv2.putText(frame, f"time left: {remaining_time:.1f}", (300, 140),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 255), 2)
-
+            frame = draw(frame, f"{language.TIME_LEFT} {remaining_time:.1f}", (150, 140), GREEN)
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = pose.process(rgb)
             if results.pose_landmarks:
@@ -135,8 +158,7 @@ with mp_pose.Pose(
                 azimuth_left = cnt_angle(vector_left_hand, vector_north)
                 azimuth_right = (azimuth_right + 360) % 360
                 azimuth_left = (azimuth_left + 360) % 360
-                direction_right = "wrong"
-                direction_left = "wrong"
+                direction_right = direction_left = language.WRONG
 
                 if is_straight(vector_rigth1, vector_right2):
                     if azimuth_right < 45 or azimuth_right > 315:
@@ -158,7 +180,8 @@ with mp_pose.Pose(
                     else:
                         direction_left = "west"
 
-            OK_RESULT = "OK!"
+            OK_RESULT = language.OK
+            WRONG_RESULT = language.WRONG
             if remaining_time <= 0:
                 if direction_left == cur_direction == direction_right == "north" or \
                         direction_left == cur_direction == direction_right == "south":
@@ -167,21 +190,20 @@ with mp_pose.Pose(
                         or direction_right == cur_direction == "east" and direction_left != "west":
                     result_text = OK_RESULT
                 else:
-                    result_text = "WRONG!"
+                    result_text = WRONG_RESULT
 
                 state = STATE_RESULT
                 state_time = time.time()
+
         elif state == STATE_RESULT:
             color = (0, 255, 0) if result_text == OK_RESULT else (0, 0, 255)
-
-            cv2.putText(frame, result_text,
-                        (260, 260), cv2.FONT_HERSHEY_SIMPLEX, 3, color, 4)
+            frame = draw(frame, result_text, (260, 260), color)
 
             if time.time() - cur_time >= RESULT_TIME:
                 state = STATE_GAME
                 cur_time = time.time()
                 cur_direction = random.choice(possible_directions)
-                direction_right = direction_left = "wrong"
+                direction_right = direction_left = WRONG_RESULT
 
         cv2.imshow("", frame)
 
