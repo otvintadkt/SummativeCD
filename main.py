@@ -140,8 +140,8 @@ with mp_pose.Pose(
             if key == ord(" "):
                 state = STATE_FINAL_RESULT
             remaining_time = ROUND_TIME - time.time() + cur_time - time_debuff
-            frame = draw(frame, f"{language.TIME_LEFT} {remaining_time:.1f}", (150, 60), GREEN)
-            frame = draw(frame, f"{language.SHOW_DIRECTION} {language.DIRECTION[cur_direction]}", (150, 100), GREEN)
+            frame = draw(frame, f"{language.TIME_LEFT} {remaining_time:.1f}", (150, 60), RED)
+            frame = draw(frame, f"{language.SHOW_DIRECTION} {language.DIRECTION[cur_direction]}", (150, 100), RED)
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = pose.process(rgb)
             if results.pose_landmarks:
