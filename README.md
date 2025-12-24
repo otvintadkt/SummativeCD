@@ -27,7 +27,8 @@
 6. Если папка с игрой находится на другом диске, прописать в терминале его название (например, D:)
 7. В терминале написать `cd <путь_к_папке_с_игрой>`
 8. Пропишите команду <путь_до_python.exe> -m venv venv. Чаще всего python расположен здесь:
-C:\Users\<имя_пользователя>\AppData\Local\Programs\Python\Python<версия>.
+C:\Users\<имя_пользователя>\AppData\Local\Programs\Python\Python<версия> (AppData - скрытый файл, надо нажать win+r и
+прописать %APPDATA% или показать скрытые файлы).
 9. Подождите, пока установится папка venv
 10. Активировать окружение: `venv\Scripts\activate.bat`
 11. Установить зависимости: `venv\Scripts\python.exe -m pip install -r requirements.txt`
