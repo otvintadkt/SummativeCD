@@ -35,12 +35,13 @@ def cnt_angle(vector1: "Vector", vector2: "Vector"):
     angle = degrees(rangle_2 - rangle_1)
     return angle
 
-def draw(img, text, cord, color):
+
+def draw(img, text, cord, _color):
     pil_img = Image.fromarray(img)
     drawing = ImageDraw.Draw(pil_img)
 
-    font = ImageFont.truetype("arial.ttf", 28)
-    drawing.text(cord, text, font=font, fill=color)
+    font = ImageFont.truetype("arial.ttf", 24)
+    drawing.text(cord, text, font=font, fill=_color)
 
     img = np.array(pil_img)
     return img
@@ -79,6 +80,9 @@ direction_right = "wrong"
 direction_left = "wrong"
 cur_direction = random.choice(possible_directions)
 Background = cv2.imread("background.png", cv2.IMREAD_COLOR)
+if Background is None:
+    print("NO BACKGROUND PICTURE FOUND!")
+    Background = np.zeros((720, 720, 3), dtype=np.uint8)
 is_backgroung_changed = False
 
 with mp_pose.Pose(
@@ -108,23 +112,36 @@ with mp_pose.Pose(
             frame = Background.copy()
             ui = np.zeros((PANEL_HEIGHT, w, 3), dtype=np.uint8)
 
-            ui = draw(ui, language.ROUND_START_TEXT, (20, 30), WHITE)
-            ui = draw(ui, language.EXIT_TEXT, (20, 100), WHITE)
+            ui = draw(ui, language.ROUND_TYPE_1_START_TEXT, (20, 30), WHITE)
+            ui = draw(ui, language.ROUND_TYPE_2_START_TEXT, (20, 70), WHITE)
+            ui = draw(ui, language.EXIT_TEXT, (20, 110), WHITE)
 
             frame = np.vstack((ui, frame))
 
-            if key == ord(" "):
+            if key == ord("1"):
                 state = STATE_GAME
+                round_mode = 1
                 cur_time = time.time()
                 cur_direction = random.choice(possible_directions)
                 direction_right = direction_left = language.WRONG
+                time_debuff = 0  #Уменьшение к-ва времени с к-вом раундов
+                rounds_total = 0
+                rounds_win = 0
+            elif key == ord("2"):
+                state = STATE_GAME
+                round_mode = 2
+                cur_time = time.time()
+                cur_direction = random.choice(possible_directions)
+                direction_right = direction_left = language.WRONG
+                time_debuff = 0
+                rounds_win_streak = 0
 
         elif state == STATE_GAME:
             if key == ord(" "):
-                state = STATE_MENU
-
-            remaining_time = ROUND_TIME - time.time() + cur_time
-            frame = draw(frame, f"{language.TIME_LEFT} {remaining_time:.1f}", (150, 140), GREEN)
+                state = STATE_FINAL_RESULT
+            remaining_time = ROUND_TIME - time.time() + cur_time - time_debuff
+            frame = draw(frame, f"{language.TIME_LEFT} {remaining_time:.1f}", (150, 60), GREEN)
+            frame = draw(frame, f"{language.SHOW_DIRECTION} {language.DIRECTION[cur_direction]}", (150, 100), GREEN)
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = pose.process(rgb)
             if results.pose_landmarks:
@@ -186,26 +203,57 @@ with mp_pose.Pose(
                 if direction_left == cur_direction == direction_right == "north" or \
                         direction_left == cur_direction == direction_right == "south":
                     result_text = OK_RESULT
+                    time_debuff = min(time_debuff + 0.1, MAX_TIME_DEBUFF)
                 elif direction_left == cur_direction == "west" and direction_right != "east" \
                         or direction_right == cur_direction == "east" and direction_left != "west":
                     result_text = OK_RESULT
+                    time_debuff = min(time_debuff + 0.1, MAX_TIME_DEBUFF)
                 else:
                     result_text = WRONG_RESULT
+                    time_debuff = 0
 
                 state = STATE_RESULT
                 state_time = time.time()
 
         elif state == STATE_RESULT:
+            if key == ord(" "):
+                cur_time = time.time()
+                state = STATE_FINAL_RESULT
+
             color = (0, 255, 0) if result_text == OK_RESULT else (0, 0, 255)
             frame = draw(frame, result_text, (260, 260), color)
 
             if time.time() - cur_time >= RESULT_TIME:
-                state = STATE_GAME
+                if result_text == WRONG_RESULT and round_mode == WIN_STREAK_MODE:
+                    MAX_WIN_STREAK = max(MAX_WIN_STREAK, rounds_win_streak)
+                    state = STATE_FINAL_RESULT
+                    cur_time = time.time()
+                elif round_mode == WIN_STREAK_MODE:
+                    rounds_win_streak += 1
+                    state = STATE_GAME
+                else:
+                    cur_time = time.time()
+                    if result_text == OK_RESULT:
+                        rounds_win += 1
+                    rounds_total += 1
+                    state = STATE_GAME
+
                 cur_time = time.time()
                 cur_direction = random.choice(possible_directions)
                 direction_right = direction_left = WRONG_RESULT
 
-        cv2.imshow("", frame)
+        elif state == STATE_FINAL_RESULT:
+            color = GREEN
+            if round_mode == ENDLLESS_MODE:
+                percent = rounds_win / rounds_total * 100 if rounds_win != 0 else 0
+                frame = draw(frame, f"{language.FINAL_RESULT_TYPE_1} {percent:0f}%", (50, 50), color)
+            else:
+                frame = draw(frame, f"{language.FINAL_RESULT_TYPE_2} {rounds_win_streak}", (50, 50), color)
+
+            if time.time() - cur_time >= FINAL_RESULT_TIME:
+                state = STATE_MENU
+
+        cv2.imshow("Картографическая смекалка", frame)
 
 cap.release()
 cv2.destroyAllWindows()
