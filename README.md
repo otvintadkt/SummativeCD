@@ -23,12 +23,12 @@
 4. Скопировать путь к этой папке (например, D:\game\SummativeCD-main\SummativeCD-main)
 5. Нажать комбинацию клавиш win+R, прописать cmd в появившемся окне. Откроется терминал.
 6. Если папка с игрой находится на другом диске, прописать в терминале его название (например, D:)
-7. Написать команду "cd ", вставить после неё путь к папке с игрой. Выполните команду.
-8. Пропишите команду {путь до python.exe} -m venv venv. Чаще всего python расположен в папке
-C:\Users\skvan\AppData\Local\Programs\Python\Python{версия python}.
+7. В терминале написать `cd <путь_к_папке_с_игрой>`
+8. Пропишите команду {путь до python.exe} -m venv venv. Чаще всего python расположен здесь:
+C:\Users\skvan\AppData\Local\Programs\Python\Python<версия>.
 9. Подождите, пока установится папка venv
-10. Пропишите "venv\Scripts\activate.bat"
-11. Пропишите "venv\Scripts\python.exe -m pip install -r requirements.txt"
+10. Активировать окружение: `venv\Scripts\activate.bat`
+11. Установить зависимости: `venv\Scripts\python.exe -m pip install -r requirements.txt`
 12. Дождитесь установки
-13. Пропишите "pip install opencv-python==4.12.0.88 --no-deps"
+13. Установить OpenCV: `pip install opencv-python==4.12.0.88 --no-deps`
 14. После установки всех библиотек для запуска игры пропишите python main.py
